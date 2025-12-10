@@ -100,9 +100,11 @@
             font-family: "Fleur De Leah", cursive;
             font-size: 5rem;
             margin: 0;
-            line-height: 0.8;
-            padding-bottom: 10px;
+            /* Increased line-height to prevent cropping of fancy swashes */
+            line-height: 1.2; 
+            padding-bottom: 20px;
             transform: rotate(-2deg); /* Jaunty angle */
+            overflow: visible; /* Ensure nothing gets clipped */
         }
 
         h2.subtitle {
@@ -165,11 +167,18 @@
             z-index: 1;
         }
 
-        /* --- BUTTON --- */
-        button#spinBtn {
+        /* --- BUTTONS --- */
+        .buttons-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        button.action-btn {
             font-family: "Henny Penny", system-ui;
             font-size: 2.5rem;
-            text-transform: capitalize; /* Changed to capitalize for "Spin Again" look */
+            text-transform: capitalize; 
             letter-spacing: 1px;
             color: #3e2704; /* Dark gold/brown text */
             
@@ -177,7 +186,7 @@
             background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-mid) 40%, var(--gold-dark) 100%);
             
             border: none;
-            padding: 15px 80px;
+            padding: 15px 60px;
             border-radius: 12px;
             cursor: pointer;
             
@@ -190,16 +199,22 @@
             transition: transform 0.1s, box-shadow 0.1s;
         }
 
-        button#spinBtn:active {
+        button.action-btn:active {
             transform: translateY(2px);
             box-shadow: 
                 inset 1px 1px 2px rgba(0,0,0,0.3),
                 0px 2px 5px rgba(0,0,0,0.5);
         }
         
-        button#spinBtn:disabled {
+        button.action-btn:disabled {
             filter: grayscale(0.8) brightness(0.7);
             cursor: not-allowed;
+        }
+        
+        /* Secondary Style for Sing Button */
+        button#singBtn {
+            display: none; /* Hidden by default */
+            /* Make it slightly distinct - maybe a redder gold? kept same for now for consistency */
         }
 
         .status {
@@ -207,6 +222,57 @@
             font-size: 1.2rem;
             color: var(--gold-mid);
             opacity: 0.8;
+        }
+
+        /* --- VIDEO OVERLAY --- */
+        .video-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 18px; /* Match container minus border */
+            z-index: 50;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .close-video {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--gold-mid);
+            color: var(--velvet-base);
+            border: 2px solid #fff;
+            font-family: "Henny Penny", system-ui;
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .close-video:hover {
+            background: #fff;
+            color: red;
         }
 
         /* Modal */
@@ -227,7 +293,7 @@
             border: 2px solid var(--gold-mid);
             box-shadow: 0 0 50px rgba(212, 175, 55, 0.2);
         }
-        .modal h2 { margin-top: 0; color: var(--gold-light); font-size: 3rem; font-family: "Fleur De Leah", cursive;}
+        .modal h2 { margin-top: 0; color: var(--gold-light); font-size: 3rem; font-family: "Fleur De Leah", cursive; line-height: 1.2;}
         .modal p { color: var(--gold-mid); font-size: 1.5rem; }
 
         @media (max-width: 600px) {
@@ -236,6 +302,8 @@
             .slot-window { height: 100px; }
             .reel-text { font-size: 1.4rem; }
             .machine-container { padding: 30px 15px; }
+            .buttons-row { gap: 10px; }
+            button.action-btn { padding: 10px 30px; font-size: 1.8rem; }
         }
     </style>
 </head>
@@ -250,6 +318,16 @@
 
     <div class="machine-container" id="machine">
         
+        <!-- Video Overlay (Hidden by default) -->
+        <div id="videoOverlay" class="video-overlay">
+            <div class="video-container">
+                <button class="close-video" onclick="closeVideo()">X</button>
+                <div id="playerTarget" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:white;">
+                    <!-- Iframe injects here -->
+                </div>
+            </div>
+        </div>
+
         <h1 class="title-main gold-text">FitzMas</h1>
         <h2 class="subtitle gold-text">Karaok-atron 3000</h2>
 
@@ -264,7 +342,10 @@
             </div>
         </div>
 
-        <button id="spinBtn" onclick="spin()">Spin!</button>
+        <div class="buttons-row">
+            <button id="spinBtn" class="action-btn" onclick="spin()">Spin!</button>
+            <button id="singBtn" class="action-btn" onclick="sing()">Sing!</button>
+        </div>
 
         <div class="status">
             Singers remaining: <span id="count">21</span>
@@ -527,10 +608,16 @@
         const reelName = document.getElementById('reel-name');
         const reelSong = document.getElementById('reel-song');
         const spinBtn = document.getElementById('spinBtn');
+        const singBtn = document.getElementById('singBtn');
         const countSpan = document.getElementById('count');
         const modal = document.getElementById('gameOverModal');
         const machineDiv = document.getElementById('machine');
+        const videoOverlay = document.getElementById('videoOverlay');
+        const playerTarget = document.getElementById('playerTarget');
+        
         let isSpinning = false;
+        // Placeholder Video ID
+        const currentVideoId = "CwoXF8Qk3Gg"; 
 
         function spin() {
             if (isSpinning) return;
@@ -542,6 +629,9 @@
             isSpinning = true;
             spinBtn.disabled = true;
             spinBtn.innerText = "Spinning...";
+            
+            // Hide Sing Button while spinning
+            singBtn.style.display = "none";
 
             let delay = 50; 
             let iterations = 0;
@@ -591,7 +681,21 @@
             } else {
                 spinBtn.disabled = false;
                 spinBtn.innerText = "Spin Again";
+                // Show Sing Button
+                singBtn.style.display = "block";
             }
+        }
+
+        function sing() {
+            // Embed YouTube Video
+            const embedUrl = `https://www.youtube.com/embed/${currentVideoId}?autoplay=1`;
+            playerTarget.innerHTML = `<iframe src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            videoOverlay.style.display = 'flex';
+        }
+
+        function closeVideo() {
+            videoOverlay.style.display = 'none';
+            playerTarget.innerHTML = ''; // Kill the iframe to stop audio
         }
 
         // --- INIT ---
