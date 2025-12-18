@@ -214,7 +214,6 @@
         /* Secondary Style for Sing Button */
         button#singBtn {
             display: none; /* Hidden by default */
-            /* Make it slightly distinct - maybe a redder gold? kept same for now for consistency */
         }
 
         .status {
@@ -593,16 +592,35 @@
             "Eva", "Iris", "Joris", "Koos", "Lili", "Marnix", 
             "Marten", "Mischa", "Reinier"
         ];
+        
         let songs = [
-            "All I Want for Christmas Is You", "Last Christmas", "Jingle Bell Rock", 
-            "Rockin' Around the Christmas Tree", "Santa Tell Me", "It's Beginning to Look a Lot Like Christmas",
-            "Underneath the Tree", "Let It Snow! Let It Snow!", "Feliz Navidad", "Sleigh Ride",
-            "Holly Jolly Christmas", "Blue Christmas", "Wonderful Christmastime", "Santa Baby",
-            "White Christmas", "Have Yourself a Merry Little Christmas", "Merry Christmas Everyone", 
-            "Step Into Christmas", "Driving Home for Christmas", "I Wish It Could Be Christmas Everyday",
-            "Do They Know It's Christmas?", "Fairytale of New York", "Mary's Boy Child", "Baby It's Cold Outside",
-            "Winter Wonderland", "Frosty the Snowman", "Rudolph the Red-Nosed Reindeer", "Silent Night", 
-            "Jingle Bells", "Santa Claus Is Coming to Town"
+            { title: "Driving home for Christmas", id: "pC49TjLzaeU" },
+            { title: "All I want for Christmas is You", id: "RmUWWVZw28E" },
+            { title: "I'm Dreaming of a White Christmas", id: "d69vjlOw3Nw" },
+            { title: "Frosty the Snowman", id: "k6zW225k_O0" },
+            { title: "Rudolph the Red Nosed Reindeer", id: "JgjkQ0Aoqv8" },
+            { title: "Santa Baby", id: "r18245qynyE" },
+            { title: "Last Christmas", id: "KhqNTjbQ71A" },
+            { title: "Feliz Navidad", id: "cRbLtqbPYjU" },
+            { title: "I saw mommy kissing Santa Claus", id: "5mgjYTtUu-o" },
+            { title: "Rocking around the Christmas tree", id: "i8gUYDoLbD4" },
+            { title: "Run Run Rudolph", id: "Lk8ctQxStyk" },
+            { title: "Let it snow", id: "Km-Nlo5bgCQ" },
+            { title: "Santa tell me", id: "ONpZ6JLcvYY" },
+            { title: "Holly Jolly Christmas", id: "wOwXRp1JK1A" },
+            { title: "Jingle Bell Rock", id: "fyEAX7Cd3OE" },
+            { title: "Winter Wonderland", id: "ZBlwZym4dfk" },
+            { title: "The Christmas song", id: "FLPi8RRvAlU" },
+            { title: "It's the most wonderful time of the year", id: "wcddNN9gwiw" },
+            { title: "Have yourself a merry little christmas", id: "3RHpgLZzXbk" },
+            { title: "Sleigh ride", id: "k1OBqhJ8Ig0" },
+            { title: "It's beginning to look a lot like Christmas", id: "uE60iiHvabk" },
+            { title: "I want a hippopotamus for xmas", id: "57vrqCENNPc" },
+            { title: "My Only Wish", id: "j7Tksexm680" },
+            { title: "Little Saint Nick", id: "AbgxDgVmMF0" },
+            { title: "Deck the Halls", id: "kORRidv-p0Y" },
+            { title: "You're a mean one, Mr Grinch", id: "XKWZ8p3pDQg" },
+            { title: "Mele Kalikimaka", id: "s06qX5Jn_yM" }
         ];
 
         const reelName = document.getElementById('reel-name');
@@ -616,8 +634,7 @@
         const playerTarget = document.getElementById('playerTarget');
         
         let isSpinning = false;
-        // Placeholder Video ID
-        const currentVideoId = "CwoXF8Qk3Gg"; 
+        let currentVideoId = ""; 
 
         function spin() {
             if (isSpinning) return;
@@ -642,7 +659,8 @@
                 const songIdx = Math.floor(Math.random() * songs.length);
                 
                 reelName.innerText = colleagues[nameIdx];
-                reelSong.innerText = songs.length > 0 ? songs[songIdx] : "Free Choice!";
+                // Access .title since songs is now an array of objects
+                reelSong.innerText = songs.length > 0 ? songs[songIdx].title : "Free Choice!";
                 
                 iterations++;
 
@@ -660,8 +678,20 @@
         }
 
         function finishSpin(nameIdx, songIdx) {
+            // Update UI with winning singer
+            reelName.innerText = colleagues[nameIdx];
+            
+            // Update UI with winning song and store ID
+            if (songs.length > 0) {
+                reelSong.innerText = songs[songIdx].title;
+                currentVideoId = songs[songIdx].id;
+                
+                // Remove song from pool to avoid repeats
+                songs.splice(songIdx, 1);
+            }
+
+            // Remove colleague from pool
             colleagues.splice(nameIdx, 1);
-            if(songs.length > 0) songs.splice(songIdx, 1);
 
             countSpan.innerText = colleagues.length;
             isSpinning = false;
@@ -681,12 +711,15 @@
             } else {
                 spinBtn.disabled = false;
                 spinBtn.innerText = "Spin Again";
-                // Show Sing Button
-                singBtn.style.display = "block";
+                // Show Sing Button if we have a valid video ID
+                if (currentVideoId) {
+                    singBtn.style.display = "block";
+                }
             }
         }
 
         function sing() {
+            if (!currentVideoId) return;
             // Embed YouTube Video
             const embedUrl = `https://www.youtube.com/embed/${currentVideoId}?autoplay=1`;
             playerTarget.innerHTML = `<iframe src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
